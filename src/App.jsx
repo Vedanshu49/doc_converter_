@@ -488,7 +488,7 @@ function App() {
       } else if (file.name.endsWith(".docx")) {
         // Use mammoth to extract text from docx
         const arrayBuffer = await file.arrayBuffer();
-        const result = await mammoth.extractRawText({ arrayBuffer });
+        const result = await window.mammoth.extractRawText({ arrayBuffer });
         fileText = result.value;
       } else if (action === "pagewise") {
         let pages = [];
