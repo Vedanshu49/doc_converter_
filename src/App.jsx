@@ -40,8 +40,8 @@ function App() {
   return (
     <div className="min-h-screen w-full bg-background text-foreground flex flex-col">
       <Header user={user} onLogin={handleLogin} onLogout={handleLogout} />
-      <main className="flex-1 flex items-center justify-center p-4">
-        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <main className="flex-1 flex flex-col items-center justify-center p-4">
+        <div className="w-full max-w-7xl mx-auto flex flex-col gap-8">
           <div className="lg:col-span-2">
             <Converter setToast={setToast} />
           </div>

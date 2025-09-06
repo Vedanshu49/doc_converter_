@@ -17,17 +17,14 @@ const AISection = ({ user, onLogin }) => {
       ) : (
         <div className="flex flex-col gap-4">
           <h2 className="text-2xl font-bold text-foreground">AI Tools</h2>
-          <p className="text-muted-foreground">AI features are coming soon! Soon you will be able to summarize, translate and more.</p>
           <div className="flex flex-col gap-3 mt-2">
             <button
-              className="w-full py-2.5 rounded-md bg-secondary text-secondary-foreground font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled
+              className="w-full py-2.5 rounded-md bg-secondary text-secondary-foreground font-semibold transition-colors"
             >
               Summarize with AI
             </button>
             <button
-              className="w-full py-2.5 rounded-md bg-secondary text-secondary-foreground font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled
+              className="w-full py-2.5 rounded-md bg-secondary text-secondary-foreground font-semibold transition-colors"
             >
               Extract Keywords
             </button>
