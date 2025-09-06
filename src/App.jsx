@@ -1,6 +1,7 @@
 
 
 import React, { useState, useEffect } from "react";
+import { geminiSummarize, geminiKeywords } from "./utils/gemini";
 import { auth, provider } from "./firebase";
 import { signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
 import Header from "./components/Header";
@@ -65,19 +66,142 @@ function App() {
     }, 2000);
   };
 
-  // Simulate AI actions
-  const handleAIClick = (action) => {
-    if (!aiEnabled) return;
+  // Real AI actions using Gemini API
+  const handleAIClick = async (action) => {
+    if (!file) {
+      setToast({ message: "Please upload a file first.", type: "error" });
+      return;
+    }
     setAiLoading(true);
     setAiResult("");
-    setTimeout(() => {
-      if (action === 'summarize') {
-        setAiResult("This is a summary of your document.\nLorem ipsum dolor sit amet...");
-      } else if (action === 'keywords') {
-        setAiResult("Keywords: document, conversion, AI, summary, keywords");
+    try {
+      // Helper to read file as text
+      const readFileAsText = (file) => {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = (e) => resolve(e.target.result);
+          reader.onerror = reject;
+          reader.readAsText(file);
+        });
+      };
+      let fileText = "";
+      if (file.type === "text/plain") {
+        fileText = await readFileAsText(file);
+      } else if (file.name.endsWith(".docx")) {
+        // Use mammoth to extract text from docx
+        const mammoth = await import("mammoth");
+        const arrayBuffer = await file.arrayBuffer();
+        const result = await mammoth.extractRawText({ arrayBuffer });
+        fileText = result.value;
+      } else if (action === "pagewise") {
+        // Page-wise summary for PDF, DOCX, TXT
+        let pages = [];
+        if (file.name.endsWith(".pdf")) {
+          const pdfjsLib = await import("pdfjs-dist/build/pdf");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+          const arrayBuffer = await file.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map(item => item.str).join(' ');
+            const words = pageText.split(/\s+/);
+            if (words.length <= 800) {
+              pages.push({ number: i, part: 1, text: pageText });
+            } else {
+              let part = 1;
+              for (let j = 0; j < words.length; j += 1000) {
+                const partText = words.slice(j, j + 1000).join(' ');
+                pages.push({ number: i, part, text: partText });
+                part++;
+              }
+            }
+          }
+        } else if (file.name.endsWith(".docx")) {
+          const mammoth = await import("mammoth");
+          const arrayBuffer = await file.arrayBuffer();
+          const result = await mammoth.extractRawText({ arrayBuffer });
+          const words = result.value.split(/\s+/);
+          let page = 1;
+          for (let i = 0; i < words.length;) {
+            const remaining = words.length - i;
+            if (remaining <= 800) {
+              const pageText = words.slice(i).join(' ');
+              pages.push({ number: page, part: 1, text: pageText });
+              break;
+            } else {
+              let part = 1;
+              let chunk = 0;
+              while (chunk < 1000 && i + chunk < words.length) chunk++;
+              const pageText = words.slice(i, i + chunk).join(' ');
+              pages.push({ number: page, part, text: pageText });
+              i += chunk;
+              part++;
+              // If next chunk is less than 800, treat as new page
+              if (words.length - i <= 800) {
+                page++;
+              }
+            }
+            page++;
+          }
+        } else if (file.type === "text/plain") {
+          const text = await readFileAsText(file);
+          const words = text.split(/\s+/);
+          let page = 1;
+          for (let i = 0; i < words.length;) {
+            const remaining = words.length - i;
+            if (remaining <= 800) {
+              const pageText = words.slice(i).join(' ');
+              pages.push({ number: page, part: 1, text: pageText });
+              break;
+            } else {
+              let part = 1;
+              let chunk = 0;
+              while (chunk < 1000 && i + chunk < words.length) chunk++;
+              const pageText = words.slice(i, i + chunk).join(' ');
+              pages.push({ number: page, part, text: pageText });
+              i += chunk;
+              part++;
+              // If next chunk is less than 800, treat as new page
+              if (words.length - i <= 800) {
+                page++;
+              }
+            }
+            page++;
+          }
+        } else {
+          setAiResult("Page-wise summary supports PDF, DOCX, and TXT files.");
+          setAiLoading(false);
+          return;
+        }
+        let summaries = [];
+        for (const page of pages) {
+          const summary = await geminiSummarize(page.text);
+          if (page.part && page.part > 1) {
+            summaries.push(`Page ${page.number} Part ${page.part}:\n${summary}`);
+          } else {
+            summaries.push(`Page ${page.number}:\n${summary}`);
+          }
+        }
+        setAiResult(summaries.join("\n\n"));
+        setAiLoading(false);
+        return;
+      } else {
+        setAiResult("AI features currently support only TXT, DOCX, and PDF (pagewise) files.");
+        setAiLoading(false);
+        return;
       }
-      setAiLoading(false);
-    }, 1800);
+      let result = "";
+      if (action === "summarize") {
+        result = await geminiSummarize(fileText);
+      } else if (action === "keywords") {
+        result = await geminiKeywords(fileText);
+      }
+      setAiResult(result);
+    } catch (err) {
+      setAiResult("AI request failed. Please try again.");
+    }
+    setAiLoading(false);
   };
 
   return (
@@ -95,6 +219,7 @@ function App() {
               setToFormat={setToFormat}
               isConverting={isConverting}
               convertedFile={convertedFile}
+              setConvertedFile={setConvertedFile}
               onConvert={handleConvert}
               setToast={setToast}
             />

@@ -40,6 +40,13 @@ const AISection = ({ user, onLogin, aiLoading, aiResult, onAIClick, aiEnabled })
                 >
                   Extract Keywords
                 </button>
+                <button
+                  className="w-full py-3 rounded-xl bg-gradient-to-r from-[#4f5bd5] to-[#23243a] text-white font-semibold shadow border border-[rgba(120,120,180,0.25)] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  onClick={() => onAIClick && onAIClick('pagewise')}
+                  disabled={!aiEnabled}
+                >
+                  Page-wise Summary (PDF)
+                </button>
               </div>
               {aiResult && (
                 <div className="mt-4 p-4 rounded-xl bg-[rgba(40,40,60,0.7)] text-white text-sm shadow-inner animate-fade-in">
